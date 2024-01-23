@@ -1,6 +1,8 @@
 import { WeatherData } from 'src/app/interfaces/weatherDataInterface';
 import { WeatherService} from './../../service/weather-service.service';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-weather-home',
@@ -8,9 +10,12 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['../../../../styles.scss']
 })
 
-export class WeatherHomeComponent implements OnInit {
-  private initialCityName = 'Rio de Janeiro';
+export class WeatherHomeComponent implements OnInit, OnDestroy {
+
+  public initialCityName = 'Rio de Janeiro';
+  private readonly destroy$: Subject<void> = new Subject();
   weatherData!: WeatherData;
+  searchIcon = faMagnifyingGlass;
 
   constructor(private weatherService: WeatherService) {}
 
@@ -19,9 +24,19 @@ export class WeatherHomeComponent implements OnInit {
   }
 
   getWeatherData(cityName: string): void {
-    this.weatherService.getWeatherData(cityName).subscribe({
+    this.weatherService.getWeatherData(cityName).pipe(takeUntil(this.destroy$)).subscribe({
       next: (response) => {response && (this.weatherData = response); console.log(this.weatherData)},
       error: (error) => {console.log(error)},
     });
+  }
+
+  onSubmit(): void {
+    this.getWeatherData(this.initialCityName);
+    this.initialCityName = '';
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
